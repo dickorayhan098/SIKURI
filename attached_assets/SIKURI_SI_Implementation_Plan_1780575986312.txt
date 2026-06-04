@@ -1,0 +1,889 @@
+================================================================================
+  IMPLEMENTATION PLAN — SIKURI SI
+  Sistem Informasi Kurikulum Program Studi S1 Sistem Informasi
+  Berbasis Web (Full-Stack Application)
+  Referensi Data: Rancangan_Kurikulum_SI_Gasal_24-25.xlsx
+  Referensi UI:   website_kurikulum_si_mockup.html
+================================================================================
+
+VERSI    : 1.0
+TANGGAL  : Juni 2025
+STATUS   : Draft Rancangan
+
+================================================================================
+DAFTAR ISI
+================================================================================
+
+  1.  Ringkasan Eksekutif
+  2.  Latar Belakang & Tujuan Sistem
+  3.  Arsitektur Sistem
+  4.  Struktur Database
+  5.  Modul & Fitur Lengkap
+      5.1   Dashboard
+      5.2   Mata Kuliah (MK)
+      5.3   CPL & CPMK
+      5.4   Pemetaan (Mapping)
+      5.5   RPS (Rencana Pembelajaran Semester)
+      5.6   Laporan & Analisis
+      5.7   Referensi (Profil Lulusan, CPL SN-Dikti, Bahan Kajian, MBKM)
+      5.8   Administrasi (Users, Import/Export, Log)
+  6.  Alur Data (Data Flow)
+  7.  Rencana Implementasi (Timeline)
+  8.  Tech Stack Rekomendasi
+  9.  Peran Pengguna (Role & Permission)
+  10. Integrasi Excel / Import-Export
+  11. Daftar Entitas Data dari Excel
+  12. Risiko & Mitigasi
+
+================================================================================
+1. RINGKASAN EKSEKUTIF
+================================================================================
+
+SIKURI SI adalah sistem manajemen kurikulum berbasis web untuk Program Studi
+S1 Sistem Informasi. Sistem ini mendigitalisasi dan mengotomasi pengelolaan
+seluruh komponen kurikulum yang sebelumnya tersebar di file Excel dengan 29
+sheet, mencakup:
+
+  - 66 Mata Kuliah (MK01–MK66+)
+  - 14 CPL Prodi (CPL01–CPL14)
+  - 145 CPMK
+  - 5 Profil Lulusan (PL1–PL5)
+  - 21 Bahan Kajian (BK01–BK21)
+  - 37 CPL SN-Dikti
+  - Rancangan RPS (template + beberapa RPS lengkap)
+  - Matriks pemetaan multi-dimensi (CPL↔MK, CPL↔BK, BK↔MK, dll.)
+
+Tujuan utama: mempermudah pengelolaan, penjaminan mutu, dan persiapan
+akreditasi BAN-PT secara terpusat dan real-time.
+
+================================================================================
+2. LATAR BELAKANG & TUJUAN SISTEM
+================================================================================
+
+MASALAH SAAT INI (kondisi Excel):
+  - Data tersebar di 29 sheet yang saling bergantung secara manual
+  - Tidak ada validasi otomatis (misal: total SKS, konsistensi pemetaan)
+  - Sulit melacak kelengkapan RPS per dosen / per mata kuliah
+  - Kolaborasi multi-user tidak dimungkinkan
+  - Laporan akreditasi harus dirakit manual dari banyak sheet
+  - Risiko inkonsistensi data tinggi (v/V dicampur, duplikat, dsb.)
+
+TUJUAN SISTEM:
+  [1] Sentralisasi seluruh data kurikulum dalam satu platform
+  [2] Manajemen CRUD penuh untuk semua entitas (MK, CPL, CPMK, RPS, dll.)
+  [3] Validasi otomatis (total SKS, kelengkapan pemetaan, bobot penilaian)
+  [4] Visualisasi matriks pemetaan interaktif
+  [5] Pembuatan dan pengelolaan RPS digital (template standar BAN-PT)
+  [6] Dashboard analitik real-time
+  [7] Laporan dan ekspor (Excel, PDF) untuk keperluan akreditasi
+  [8] Multi-role: Kaprodi, Dosen, Admin Prodi, Operator
+  [9] Log aktivitas untuk audit trail
+  [10] Import data awal dari file Excel yang sudah ada
+
+================================================================================
+3. ARSITEKTUR SISTEM
+================================================================================
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │                        BROWSER CLIENT                       │
+  │         (Next.js / React SPA — Responsive Web App)         │
+  └────────────────────────┬────────────────────────────────────┘
+                           │ HTTPS / REST API / WebSocket
+  ┌────────────────────────▼────────────────────────────────────┐
+  │                     BACKEND SERVER                          │
+  │              (Node.js + Express  OR  Django REST)           │
+  │                                                             │
+  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────┐  │
+  │  │Auth/JWT  │ │ MK API   │ │ CPL API  │ │ RPS API      │  │
+  │  └──────────┘ └──────────┘ └──────────┘ └──────────────┘  │
+  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────┐  │
+  │  │Pemetaan  │ │Laporan   │ │Import/   │ │Notifikasi    │  │
+  │  │API       │ │API       │ │Export    │ │& Log API     │  │
+  │  └──────────┘ └──────────┘ └──────────┘ └──────────────┘  │
+  └────────────────────────┬────────────────────────────────────┘
+                           │
+  ┌────────────────────────▼────────────────────────────────────┐
+  │                      DATABASE                               │
+  │                  PostgreSQL (Primary)                       │
+  │         + Redis (Caching, Session, Queue)                   │
+  └─────────────────────────────────────────────────────────────┘
+                           │
+  ┌────────────────────────▼────────────────────────────────────┐
+  │                   FILE STORAGE                              │
+  │    S3 / MinIO (Dokumen PDF, Upload Excel, Template RPS)     │
+  └─────────────────────────────────────────────────────────────┘
+
+LAYER DETAIL:
+  - Frontend   : Next.js 14 (App Router), Tailwind CSS, Shadcn/UI, Recharts
+  - Backend    : Node.js + Express.js atau Laravel (PHP) jika tim lebih familiar
+  - Database   : PostgreSQL dengan relasi penuh
+  - Auth       : JWT + Refresh Token, bcrypt hashing
+  - File Export: SheetJS (Excel), jsPDF / WeasyPrint (PDF)
+  - File Import: Multer + custom parser untuk Excel sesuai format yang ada
+
+================================================================================
+4. STRUKTUR DATABASE
+================================================================================
+
+-- Referensi --
+
+TABLE profil_lulusan
+  id           SERIAL PK
+  kode         VARCHAR(10) UNIQUE    -- PL1, PL2, ...
+  deskripsi    TEXT
+  tipe         VARCHAR(50)           -- Penciri Utama, Sikap, dll.
+  referensi    TEXT
+  created_at   TIMESTAMP
+  updated_at   TIMESTAMP
+
+TABLE cpl_sndikti
+  id           SERIAL PK
+  kode         VARCHAR(20) UNIQUE    -- CPL-S01, CPL-KU01, CPL-KK01, CPL-P01
+  kelompok     VARCHAR(30)           -- SIKAP, KETERAMPILAN UMUM, KK, PENGETAHUAN
+  deskripsi    TEXT
+  created_at   TIMESTAMP
+
+TABLE bahan_kajian
+  id           SERIAL PK
+  kode         VARCHAR(10) UNIQUE    -- BK01–BK21
+  nama         VARCHAR(200)
+  created_at   TIMESTAMP
+
+-- CPL & CPMK Prodi --
+
+TABLE cpl_prodi
+  id           SERIAL PK
+  kode         VARCHAR(10) UNIQUE    -- CPL01–CPL14
+  deskripsi    TEXT
+  created_at   TIMESTAMP
+  updated_at   TIMESTAMP
+
+TABLE cpl_prodi_sndikti  (relasi M:M)
+  cpl_prodi_id   INT FK → cpl_prodi
+  cpl_sndikti_id INT FK → cpl_sndikti
+  PRIMARY KEY (cpl_prodi_id, cpl_sndikti_id)
+
+TABLE cpl_prodi_profil_lulusan  (relasi M:M)
+  cpl_prodi_id       INT FK → cpl_prodi
+  profil_lulusan_id  INT FK → profil_lulusan
+  PRIMARY KEY (cpl_prodi_id, profil_lulusan_id)
+
+TABLE cpmk
+  id             SERIAL PK
+  kode           VARCHAR(20) UNIQUE    -- CPMK011, CPMK021, ...
+  cpl_prodi_id   INT FK → cpl_prodi
+  deskripsi      TEXT
+  created_at     TIMESTAMP
+  updated_at     TIMESTAMP
+
+-- Mata Kuliah --
+
+TABLE mata_kuliah
+  id             SERIAL PK
+  kode           VARCHAR(20) UNIQUE    -- MK01, SIA22308, MK-Pil, dll.
+  nama           VARCHAR(200)
+  sks            INT
+  semester       INT                   -- 1–8
+  tipe           VARCHAR(20)           -- WAJIB, PILIHAN, MKDK, MKWK, CAPSTONE
+  kelompok       VARCHAR(50)           -- MK Wajib Prodi, MKWK Universitas, dll.
+  dosen_pengampu TEXT                  -- bisa multi-dosen, simpan sebagai text/array
+  is_aktif       BOOLEAN DEFAULT TRUE
+  mbkm           BOOLEAN DEFAULT FALSE
+  created_at     TIMESTAMP
+  updated_at     TIMESTAMP
+
+TABLE mk_bahan_kajian  (relasi M:M)
+  mk_id          INT FK → mata_kuliah
+  bk_id          INT FK → bahan_kajian
+  PRIMARY KEY (mk_id, bk_id)
+
+TABLE mk_cpl  (relasi M:M — Sheet 9 & 14)
+  mk_id          INT FK → mata_kuliah
+  cpl_id         INT FK → cpl_prodi
+  PRIMARY KEY (mk_id, cpl_id)
+
+TABLE mk_cpmk  (relasi M:M — Sheet 14)
+  mk_id          INT FK → mata_kuliah
+  cpmk_id        INT FK → cpmk
+  PRIMARY KEY (mk_id, cpmk_id)
+
+TABLE cpl_bk  (relasi M:M — Sheet 7)
+  cpl_id         INT FK → cpl_prodi
+  bk_id          INT FK → bahan_kajian
+  PRIMARY KEY (cpl_id, bk_id)
+
+-- Sub-CPMK --
+
+TABLE sub_cpmk
+  id             SERIAL PK
+  kode           VARCHAR(30)
+  cpmk_id        INT FK → cpmk
+  mk_id          INT FK → mata_kuliah
+  deskripsi      TEXT
+  urutan         INT
+  created_at     TIMESTAMP
+
+-- Penilaian & Bobot --
+
+TABLE teknik_penilaian_cpmk  (Sheet 16, 17, 18)
+  id                     SERIAL PK
+  mk_id                  INT FK → mata_kuliah
+  cpmk_id                INT FK → cpmk
+  partisipasi_pct        INT DEFAULT 0
+  observasi_pct          INT DEFAULT 0
+  unjuk_kerja_pct        INT DEFAULT 0
+  tes_tulis_uts_pct      INT DEFAULT 0
+  tes_tulis_uas_pct      INT DEFAULT 0
+  tes_lisan_pct          INT DEFAULT 0
+  total_pct              INT GENERATED AS (partisipasi_pct + observasi_pct +
+                            unjuk_kerja_pct + tes_tulis_uts_pct +
+                            tes_tulis_uas_pct + tes_lisan_pct) STORED
+  tahap_penilaian        TEXT
+  teknik_penilaian       TEXT
+  instrumen              TEXT
+  kriteria               TEXT
+  CHECK (total_pct = 100 OR total_pct = 0)
+
+-- RPS --
+
+TABLE rps
+  id                   SERIAL PK
+  mk_id                INT FK → mata_kuliah UNIQUE
+  kode_dokumen         VARCHAR(50)
+  tanggal_penyusunan   DATE
+  dosen_pengembang     TEXT
+  koordinator_bk       TEXT
+  kaprodi              TEXT
+  status               VARCHAR(20)   -- DRAFT, REVIEW, LENGKAP, REVISI
+  versi                INT DEFAULT 1
+  catatan_revisi       TEXT
+  created_at           TIMESTAMP
+  updated_at           TIMESTAMP
+  created_by           INT FK → users
+
+TABLE rps_pertemuan  (16 pertemuan per RPS)
+  id                   SERIAL PK
+  rps_id               INT FK → rps
+  pertemuan_ke         INT           -- 1–16
+  sub_cpmk_id          INT FK → sub_cpmk (nullable)
+  materi               TEXT
+  metode_pembelajaran  TEXT
+  aktivitas            TEXT
+  media                TEXT
+  waktu_menit          INT
+  referensi            TEXT
+  indikator            TEXT
+  bobot_nilai          INT
+  created_at           TIMESTAMP
+
+-- Users & Auth --
+
+TABLE users
+  id           SERIAL PK
+  nama         VARCHAR(100)
+  email        VARCHAR(100) UNIQUE
+  password     VARCHAR(255)          -- bcrypt hash
+  role         VARCHAR(20)           -- ADMIN, KAPRODI, DOSEN, OPERATOR
+  is_aktif     BOOLEAN DEFAULT TRUE
+  last_login   TIMESTAMP
+  created_at   TIMESTAMP
+
+TABLE activity_log
+  id           SERIAL PK
+  user_id      INT FK → users
+  aksi         VARCHAR(50)           -- CREATE, UPDATE, DELETE, EXPORT, IMPORT
+  entitas      VARCHAR(50)           -- MK, CPL, RPS, dll.
+  entitas_id   INT
+  detail       JSONB
+  ip_address   VARCHAR(50)
+  created_at   TIMESTAMP
+
+================================================================================
+5. MODUL & FITUR LENGKAP
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+5.1  MODUL: DASHBOARD
+────────────────────────────────────────────────────────────────────────────────
+
+HALAMAN UTAMA — tampil pertama saat login
+
+WIDGET STATISTIK (Stat Cards):
+  ├─ Total Mata Kuliah          : count(mata_kuliah) — saat ini 66
+  ├─ CPL Prodi Aktif            : count(cpl_prodi) — saat ini 14
+  ├─ Total CPMK                 : count(cpmk) — saat ini 145
+  └─ Total SKS Kurikulum        : sum(sks) dari mata_kuliah — saat ini 144
+
+GRAFIK & VISUALISASI:
+  ├─ Bar chart / Progress Bar: Distribusi SKS per Semester (Smt 1–8)
+  ├─ Progress list: Status Kelengkapan Dokumen
+  │     • RPS tersusun (misal: 8/66 = 12%)
+  │     • Pemetaan CPL-MK lengkap (66/66 = 100%)
+  │     • CPMK terdefinisi (66/66 = 100%)
+  │     • Bobot penilaian terisi (12/66 = 18%)
+  │     • Sub-CPMK terisi (29/66 = 44%)
+  └─ Timeline/Grid: Susunan MK per Semester (view visual 8 kolom)
+       - Warna berdasarkan tipe: Wajib, Pilihan, MK Universitas, Capstone/TA
+
+AKSI CEPAT:
+  ├─ Tombol "Unduh Laporan" (export PDF summary)
+  ├─ Tombol "Analisis Kurikulum" (trigger AI / laporan otomatis)
+  └─ Notifikasi: mata kuliah yang belum lengkap pemetaan/RPS
+
+ALERT / BANNER:
+  └─ Peringatan jika total SKS semester melebihi 24 atau kurang dari 12
+  └─ Peringatan MK tanpa CPL yang dipetakan
+  └─ Peringatan bobot penilaian belum 100%
+
+────────────────────────────────────────────────────────────────────────────────
+5.2  MODUL: MATA KULIAH
+────────────────────────────────────────────────────────────────────────────────
+
+DAFTAR MATA KULIAH:
+  ├─ Tabel dengan kolom: Kode, Nama MK, SKS, Semester, Tipe, Dosen, Status RPS
+  ├─ Search bar (cari berdasarkan kode/nama/dosen)
+  ├─ Filter chips: Semester 1–8, Tipe (Wajib/Pilihan/MKDK), Status RPS
+  ├─ Sortable columns (klik header untuk sort)
+  └─ Pagination (20 item/halaman, bisa diubah)
+
+VIEW PER SEMESTER:
+  ├─ Tab selector Smt 1–8
+  ├─ Tampilan kartu grid per semester dengan total SKS semester
+  └─ Drag-and-drop untuk memindahkan MK antar semester (role: Kaprodi/Admin)
+
+DETAIL MATA KULIAH:
+  ├─ Info dasar (kode, nama, SKS, semester, tipe, kelompok)
+  ├─ Dosen pengampu (bisa multi-dosen, dengan autocomplete dari daftar)
+  ├─ Bahan Kajian yang dikaitkan (multi-select dari BK01–BK21)
+  ├─ CPL yang dipetakan ke MK ini (readonly, auto dari tabel mk_cpl)
+  ├─ CPMK yang dipetakan (readonly, auto dari tabel mk_cpmk)
+  ├─ Link ke halaman RPS mata kuliah
+  └─ Riwayat perubahan
+
+CRUD MATA KULIAH:
+  ├─ Tambah MK baru (form modal)
+  ├─ Edit MK (inline edit atau modal)
+  ├─ Hapus MK (soft-delete, konfirmasi)
+  └─ Validasi: kode unik, SKS 1–6, semester 1–8
+
+FITUR TAMBAHAN:
+  ├─ Cetak daftar MK (PDF/Excel)
+  └─ Import MK dari Excel (Sheet 11: Susunan Mata Kuliah)
+
+────────────────────────────────────────────────────────────────────────────────
+5.3  MODUL: CPL & CPMK
+────────────────────────────────────────────────────────────────────────────────
+
+HALAMAN CPL PRODI:
+  ├─ List 14 CPL dengan kode, deskripsi, referensi SN-Dikti
+  ├─ Per CPL: tampilkan PL yang terkait (dari tabel cpl_prodi_profil_lulusan)
+  ├─ Per CPL: tampilkan MK yang membawa CPL ini
+  ├─ Per CPL: tampilkan CPMK turunannya
+  ├─ CRUD: Tambah/Edit/Hapus CPL (role: Kaprodi/Admin)
+  └─ Badge penanda: berapa MK yang memuat CPL ini
+
+HALAMAN CPMK:
+  ├─ List semua CPMK dikelompokkan per CPL
+  ├─ Per CPMK: kode, deskripsi CPL induk, MK yang memuat CPMK ini
+  ├─ CRUD CPMK (tambah/edit/hapus, pilih CPL induk)
+  └─ Validasi: setiap CPMK harus punya minimal 1 MK terkait
+
+HALAMAN SUB-CPMK:
+  ├─ List Sub-CPMK dikelompokkan per MK dan CPMK
+  ├─ CRUD Sub-CPMK (kode, deskripsi, urutan)
+  └─ Link otomatis ke tabel RPS pertemuan
+
+HALAMAN PROFIL LULUSAN (Referensi):
+  ├─ List 5 PL dengan kode, deskripsi, tipe, referensi peta okupasi
+  └─ CRUD (role: Kaprodi/Admin)
+
+HALAMAN CPL SN-DIKTI (Referensi, readonly default):
+  ├─ List 37 CPL SN-Dikti dikelompokkan: Sikap(S), KU, KK, Pengetahuan(P)
+  └─ Edit hanya jika ada perubahan regulasi (role: Admin)
+
+────────────────────────────────────────────────────────────────────────────────
+5.4  MODUL: PEMETAAN (MAPPING)
+────────────────────────────────────────────────────────────────────────────────
+
+SUB-MODUL 5.4.1 — PEMETAAN CPL–MK  (Sheet 9)
+  ├─ Matriks interaktif: baris = MK (66), kolom = CPL (14)
+  ├─ Klik sel untuk toggle centang/kosong
+  ├─ Highlight baris MK yang tidak memiliki CPL sama sekali (warning)
+  ├─ Highlight kolom CPL yang tidak memiliki MK (warning)
+  ├─ Export matriks ke Excel / PDF
+  └─ Auto-sync dengan data di modul Mata Kuliah
+
+SUB-MODUL 5.4.2 — PEMETAAN CPL–CPMK–MK  (Sheet 13 & 14)
+  ├─ Tabel hierarki: CPL → CPMK → MK
+  ├─ Per baris: CPL, deskripsi CPL, kode CPMK, deskripsi CPMK, daftar MK
+  ├─ Filter berdasarkan CPL atau MK
+  └─ Export ke Excel
+
+SUB-MODUL 5.4.3 — PEMETAAN CPL–BK  (Sheet 7)
+  ├─ Matriks: baris = BK (21), kolom = CPL (14)
+  └─ CRUD (tambah/hapus relasi BK↔CPL)
+
+SUB-MODUL 5.4.4 — PEMETAAN BK–MK  (Sheet 8)
+  ├─ Matriks: baris = MK (66), kolom = BK (21)
+  └─ CRUD (multi-select BK untuk setiap MK)
+
+SUB-MODUL 5.4.5 — PETA PEMENUHAN CPL  (Sheet 12a)
+  ├─ View: per CPL, tampilkan MK per semester yang memenuhi CPL tersebut
+  ├─ Visualisasi timeline per semester (8 kolom)
+  └─ Highlight gap: CPL yang tidak terpenuhi di beberapa semester kritis
+
+SUB-MODUL 5.4.6 — PEMETAAN MK–CPMK–SUB-CPMK  (Sheet 15 & 22)
+  ├─ Per MK: tampilkan CPMK dan Sub-CPMK yang terkait
+  ├─ Korelasi CPMK terhadap Sub-CPMK (checkbox matrix)
+  └─ CRUD Sub-CPMK langsung dari halaman ini
+
+SUB-MODUL 5.4.7 — CPL–PL  (Sheet 5)
+  ├─ Matriks: baris = CPL, kolom = PL (5)
+  └─ CRUD relasi CPL↔PL
+
+SUB-MODUL 5.4.8 — CPL SN-DIKTI ↔ CPL PRODI  (Sheet 4)
+  ├─ Matriks: baris = CPL SN-Dikti (37), kolom = CPL Prodi (14)
+  └─ CRUD relasi
+
+FITUR GLOBAL PEMETAAN:
+  ├─ Validasi otomatis dan indikator kelengkapan pemetaan
+  ├─ "Cek Konsistensi": highlight inkonsistensi antar sheet
+  └─ Export semua matriks sekaligus (satu file Excel multi-sheet)
+
+────────────────────────────────────────────────────────────────────────────────
+5.5  MODUL: RPS (RENCANA PEMBELAJARAN SEMESTER)
+────────────────────────────────────────────────────────────────────────────────
+
+DAFTAR RPS:
+  ├─ List semua RPS per MK dengan kolom: MK, Dosen, Semester, Status, Update
+  ├─ Status pill: LENGKAP (hijau), DRAFT (kuning), BELUM (abu)
+  ├─ Search & filter (per semester, per dosen, per status)
+  └─ Quick link ke edit/preview RPS
+
+EDITOR RPS (form lengkap sesuai template BAN-PT — Sheet 21):
+  ├─ Header RPS:
+  │     - Nama MK, Kode MK
+  │     - Bahan Kajian
+  │     - Bobot SKS: T (Teori) + P (Praktikum)
+  │     - Semester
+  │     - Tanggal penyusunan
+  │     - Kode dokumen
+  │     - Dosen pengembang, Koordinator BK, Ka. Prodi (dengan tanda tangan digital)
+  │
+  ├─ Capaian Pembelajaran:
+  │     - CPL-Prodi yang dibebankan (auto-pull dari pemetaan, bisa override)
+  │     - CPMK (auto-pull dari pemetaan, bisa edit)
+  │     - Sub-CPMK (dengan urutan dan deskripsi)
+  │
+  ├─ Matriks Korelasi CPMK ↔ Sub-CPMK (tabel centang)
+  │
+  ├─ Teknik & Bobot Penilaian:
+  │     - Per CPMK: Partisipasi, Observasi, Unjuk Kerja, UTS, UAS, Tugas Kelompok
+  │     - Validasi: total bobot harus = 100%
+  │     - Auto-kalkulasi total
+  │
+  ├─ Rencana Pertemuan (16 pertemuan):
+  │     - Tabel 16 baris dengan kolom:
+  │         Pertemuan ke-, Sub-CPMK, Materi/Pokok Bahasan,
+  │         Metode Pembelajaran, Aktivitas, Media, Waktu, Referensi,
+  │         Indikator Penilaian, Bobot
+  │     - Inline edit tiap sel
+  │     - Auto-numeration
+  │
+  └─ Referensi (daftar pustaka)
+
+KONTROL RPS:
+  ├─ Simpan sebagai Draft
+  ├─ Submit untuk Review (notifikasi ke Kaprodi)
+  ├─ Approve / Reject (Kaprodi)
+  ├─ Cetak / Export PDF (format RPS resmi)
+  ├─ Riwayat versi
+  └─ Duplicate RPS (untuk MK yang sejenis)
+
+TEMPLATE RPS:
+  └─ Generate template RPS kosong berdasarkan data MK, CPL, CPMK yang sudah ada
+
+────────────────────────────────────────────────────────────────────────────────
+5.6  MODUL: LAPORAN & ANALISIS
+────────────────────────────────────────────────────────────────────────────────
+
+LAPORAN 1 — ANALISIS KECUKUPAN CPL:
+  ├─ Per CPL: berapa MK yang membawa CPL, di semester berapa, berapa SKS
+  ├─ Visualisasi heatmap: CPL vs Semester
+  └─ Identifikasi CPL yang "kekurangan" atau "kelebihan" beban
+
+LAPORAN 2 — DISTRIBUSI BEBAN STUDI:
+  ├─ SKS per semester (bar chart)
+  ├─ Rasio MK Wajib vs Pilihan
+  ├─ SKS per Bahan Kajian
+  └─ Perbandingan teori vs praktikum
+
+LAPORAN 3 — STATUS KESIAPAN AKREDITASI BAN-PT:
+  ├─ Progress kelengkapan: RPS, bobot penilaian, Sub-CPMK, pemetaan CPL-MK
+  ├─ Checklist 9 standar akreditasi (sesuai IAPS BAN-PT)
+  └─ Persentase kesiapan per komponen
+
+LAPORAN 4 — ALUR PEMINATAN MAHASISWA:
+  ├─ Visualisasi graph/flowchart jalur peminatan:
+  │     - IT Management
+  │     - Data Analytics
+  │     - Digital Business
+  └─ Rekomendasi urutan MK Pilihan per peminatan
+
+LAPORAN 5 — MATRIKS CPL-MK LENGKAP:
+  └─ Export matriks semua relasi ke Excel (.xlsx) — Sheet 9 equivalent
+
+LAPORAN 6 — REKAP RPS:
+  └─ Export rekap semua RPS dalam satu file PDF
+
+LAPORAN 7 — ORGANISASI MATA KULIAH:
+  └─ Tabel susunan MK per semester (Sheet 12 equivalent)
+
+LAPORAN 8 — RUMUSAN AKHIR MK & CPL:
+  └─ Rekap skor, CPMK, dan CPL (Sheet 19 & 20 equivalent)
+
+UNDUH LAPORAN:
+  ├─ Matriks CPL-MK (.xlsx)
+  ├─ Rekap RPS semua MK (.pdf)
+  ├─ Laporan Kurikulum Lengkap (.pdf)
+  └─ Cetak Susunan MK (.pdf)
+
+────────────────────────────────────────────────────────────────────────────────
+5.7  MODUL: REFERENSI
+────────────────────────────────────────────────────────────────────────────────
+
+  ├─ Profil Lulusan (Sheet 1)        — 5 PL, CRUD
+  ├─ CPL SN-Dikti (Sheet 2)          — 37 CPL, CRUD (admin only)
+  ├─ Bahan Kajian (Sheet 6)          — 21 BK, CRUD
+  └─ MBKM                            — Program MBKM yang bisa diambil
+
+────────────────────────────────────────────────────────────────────────────────
+5.8  MODUL: ADMINISTRASI
+────────────────────────────────────────────────────────────────────────────────
+
+MANAJEMEN PENGGUNA:
+  ├─ CRUD user (nama, email, role, status aktif)
+  ├─ Reset password
+  └─ Assign dosen ke mata kuliah
+
+IMPORT / EXPORT:
+  ├─ Import dari Excel:
+  │     - Import MK (Sheet 11: Susunan Mata Kuliah)
+  │     - Import CPL Prodi (Sheet 3)
+  │     - Import CPMK (Sheet 13)
+  │     - Import Pemetaan CPL-MK (Sheet 9)
+  │     - Import Bahan Kajian (Sheet 6)
+  │     - Import Bobot Penilaian (Sheet 18)
+  │     - Import Sub-CPMK (Sheet 15/22)
+  │     - Import massal dari file Excel lengkap (smart parser)
+  │
+  ├─ Export ke Excel:
+  │     - Semua sheet equivalent dalam satu file
+  │     - Export per modul
+  │
+  └─ Export ke PDF:
+       - Laporan kurikulum lengkap
+       - Semua RPS
+       - Matriks pemetaan
+
+LOG AKTIVITAS:
+  ├─ Timeline semua aksi: siapa, kapan, apa, data apa
+  ├─ Filter per user, per aksi, per tanggal
+  └─ Export log (CSV)
+
+PENGATURAN SISTEM:
+  ├─ Nama prodi, tahun akademik aktif
+  ├─ Template RPS default
+  └─ Batas SKS per semester (validasi)
+
+================================================================================
+6. ALUR DATA (DATA FLOW)
+================================================================================
+
+ALUR SETUP AWAL (saat pertama kali):
+  [1] Import/Input Profil Lulusan (PL1–PL5)
+  [2] Import/Input CPL SN-Dikti (37 butir)
+  [3] Input CPL Prodi (14 butir) + petakan ke CPL SN-Dikti
+  [4] Petakan CPL Prodi → Profil Lulusan
+  [5] Input Bahan Kajian (BK01–BK21)
+  [6] Petakan CPL Prodi → Bahan Kajian
+  [7] Import/Input Mata Kuliah (66 MK) dengan semester & SKS
+  [8] Petakan MK → Bahan Kajian
+  [9] Input CPMK per CPL
+  [10] Petakan MK → CPL → CPMK
+  [11] Input Sub-CPMK per MK
+  [12] Input teknik & bobot penilaian per MK-CPMK
+  [13] Buat/isi RPS per MK
+
+ALUR PENGELOLAAN RUTIN:
+  Dosen → Buka halaman RPS → Edit pertemuan → Submit → Kaprodi review → Approve
+  Admin → Monitor dashboard → Generate laporan → Export → Kirim ke BAN-PT
+
+================================================================================
+7. RENCANA IMPLEMENTASI (TIMELINE)
+================================================================================
+
+FASE 0 — PERSIAPAN  (Minggu 1–2)
+  ├─ Setup repository Git
+  ├─ Setup environment (dev/staging/production)
+  ├─ Setup database PostgreSQL + migration awal
+  ├─ Konfigurasi CI/CD dasar
+  └─ Onboarding tim developer
+
+FASE 1 — FONDASI BACKEND + AUTH  (Minggu 3–5)
+  ├─ Implementasi semua tabel database
+  ├─ API: Authentication (register, login, refresh token)
+  ├─ API: CRUD Mata Kuliah
+  ├─ API: CRUD CPL Prodi & CPMK
+  ├─ API: Import Excel (parser Sheet 11, 3, 9)
+  └─ Unit test API dasar
+
+FASE 2 — FRONTEND DASAR  (Minggu 6–8)
+  ├─ Setup Next.js + Tailwind + Shadcn UI
+  ├─ Layout: Sidebar, Navbar, Auth pages
+  ├─ Halaman Dashboard (statistik + grafik)
+  ├─ Halaman Mata Kuliah (list + CRUD)
+  └─ Halaman CPL & CPMK (list + CRUD)
+
+FASE 3 — MODUL PEMETAAN  (Minggu 9–11)
+  ├─ API: semua relasi pemetaan (M:M tables)
+  ├─ UI: Matriks interaktif CPL–MK
+  ├─ UI: Pemetaan CPL–CPMK–MK (hierarki)
+  ├─ UI: Pemetaan BK–MK, CPL–BK
+  └─ Validasi konsistensi pemetaan
+
+FASE 4 — MODUL RPS  (Minggu 12–15)
+  ├─ API: CRUD RPS + pertemuan
+  ├─ API: workflow approval RPS
+  ├─ UI: Editor RPS lengkap (form kompleks)
+  ├─ UI: Matriks korelasi CPMK–SubCPMK
+  ├─ UI: Tabel 16 pertemuan (inline edit)
+  └─ Export PDF RPS
+
+FASE 5 — LAPORAN & ADMIN  (Minggu 16–18)
+  ├─ API: Laporan dan analitik
+  ├─ UI: Halaman laporan (chart, progress)
+  ├─ Export Excel multi-sheet
+  ├─ Import Excel massal (smart parser)
+  ├─ Modul Administrasi (users, log)
+  └─ Notifikasi in-app
+
+FASE 6 — TESTING & MIGRASI DATA  (Minggu 19–21)
+  ├─ Migrasi data dari Excel yang sudah ada
+  ├─ UAT (User Acceptance Testing) dengan Kaprodi & Dosen
+  ├─ Bug fixing
+  ├─ Performance testing
+  └─ Security audit (OWASP dasar)
+
+FASE 7 — DEPLOYMENT & GO-LIVE  (Minggu 22)
+  ├─ Deploy ke server production
+  ├─ Training user (Kaprodi, Dosen, Admin)
+  ├─ Buat user manual
+  └─ Go-live & monitoring
+
+TOTAL ESTIMASI: ±22 minggu (5–6 bulan) untuk tim 3–4 developer
+
+================================================================================
+8. TECH STACK REKOMENDASI
+================================================================================
+
+FRONTEND:
+  - Framework  : Next.js 14 (React, App Router, SSR)
+  - Styling    : Tailwind CSS + Shadcn/UI
+  - Charts     : Recharts / Chart.js
+  - Table      : TanStack Table (react-table)
+  - Form       : React Hook Form + Zod validation
+  - State      : Zustand atau Context API
+  - HTTP       : Axios / TanStack Query (react-query)
+  - Icons      : Tabler Icons (@tabler/icons-react)  — sesuai mockup
+
+BACKEND PILIHAN A (Node.js):
+  - Runtime    : Node.js 20 LTS
+  - Framework  : Express.js + TypeScript
+  - ORM        : Prisma (PostgreSQL)
+  - Auth       : JWT + bcrypt
+  - Validation : Zod
+  - File Parse : SheetJS (xlsx)
+  - PDF        : Puppeteer atau @react-pdf/renderer
+
+BACKEND PILIHAN B (Laravel — jika tim PHP):
+  - Framework  : Laravel 11
+  - ORM        : Eloquent
+  - Auth       : Laravel Sanctum (token)
+  - File Parse : PhpSpreadsheet
+  - PDF        : DomPDF / Browsershot
+
+DATABASE:
+  - Primary    : PostgreSQL 16
+  - Cache      : Redis 7
+  - Migrations : Prisma Migrate (atau Laravel Migrations)
+
+DEPLOYMENT:
+  - Container  : Docker + Docker Compose
+  - Cloud      : VPS (DigitalOcean/Hostinger) atau on-premise server
+  - Reverse Proxy: Nginx
+  - SSL        : Let's Encrypt (Certbot)
+  - CI/CD      : GitHub Actions
+
+================================================================================
+9. PERAN PENGGUNA (ROLE & PERMISSION)
+================================================================================
+
+ROLE: ADMIN (Super Admin)
+  - Akses penuh semua fitur
+  - Manajemen user
+  - Import/Export massal
+  - Pengaturan sistem
+  - Log aktivitas
+  - Hapus data
+
+ROLE: KAPRODI (Ketua Program Studi)
+  - CRUD semua entitas kurikulum (MK, CPL, CPMK, Pemetaan)
+  - Approve/Reject RPS dosen
+  - Akses semua laporan dan export
+  - Tidak dapat: hapus user, ubah pengaturan sistem
+
+ROLE: DOSEN
+  - Lihat semua data kurikulum (read-only kecuali RPS)
+  - CRUD RPS untuk mata kuliah yang diajarnya
+  - Submit RPS untuk review
+  - Cetak RPS miliknya
+
+ROLE: OPERATOR (Tendik / Staff Prodi)
+  - Lihat semua data (read-only)
+  - Input/edit data referensi (BK, PL)
+  - Bantu input data kurikulum (dengan persetujuan Kaprodi)
+  - Export laporan
+
+MATRIKS PERMISSION:
+
+Fitur                  | ADMIN | KAPRODI | DOSEN  | OPERATOR
+-----------------------|-------|---------|--------|----------
+Lihat Dashboard        |  ✓    |   ✓     |   ✓    |   ✓
+CRUD Mata Kuliah       |  ✓    |   ✓     |   ✗    |   ✗
+CRUD CPL/CPMK          |  ✓    |   ✓     |   ✗    |   ✗
+Edit Pemetaan          |  ✓    |   ✓     |   ✗    |   ✗
+View Pemetaan          |  ✓    |   ✓     |   ✓    |   ✓
+Edit RPS (semua)       |  ✓    |   ✓     |   ✗    |   ✗
+Edit RPS (milik sendiri)|  ✓   |   ✓     |   ✓    |   ✗
+Approve RPS            |  ✓    |   ✓     |   ✗    |   ✗
+Export Laporan         |  ✓    |   ✓     |   ✓*   |   ✓
+Import Excel           |  ✓    |   ✓     |   ✗    |   ✗
+Manajemen User         |  ✓    |   ✗     |   ✗    |   ✗
+Lihat Log              |  ✓    |   ✓**  |   ✗    |   ✗
+
+*  Dosen hanya export laporan yang relevan dengan matakuliahnya
+** Kaprodi hanya lihat log aktivitas (tidak edit)
+
+================================================================================
+10. INTEGRASI EXCEL / IMPORT-EXPORT
+================================================================================
+
+FITUR IMPORT:
+  ├─ Upload file .xlsx melalui drag-and-drop atau browse
+  ├─ Preview data sebelum import (tabel preview dengan validasi)
+  ├─ Pilih sheet yang akan di-import
+  ├─ Mapping kolom (jika header berbeda)
+  ├─ Mode: INSERT baru, atau UPDATE + INSERT (upsert)
+  ├─ Laporan hasil import: berhasil X, error Y, skip Z
+  └─ Rollback jika ada error kritis
+
+SHEET YANG DAPAT DI-IMPORT:
+  Sheet 1  → Profil Lulusan
+  Sheet 2  → CPL SN-Dikti
+  Sheet 3  → CPL Prodi
+  Sheet 4  → Relasi CPL SN-Dikti ↔ CPL Prodi
+  Sheet 5  → Relasi CPL ↔ PL
+  Sheet 6  → Bahan Kajian
+  Sheet 7  → Relasi CPL ↔ BK
+  Sheet 8  → Relasi BK ↔ MK
+  Sheet 9  → Relasi CPL ↔ MK
+  Sheet 11 → Susunan Mata Kuliah (master data MK)
+  Sheet 13 → Pemetaan CPL-CPMK-MK (CPMK)
+  Sheet 15 → Pemetaan MK-CPMK-SubCPMK
+  Sheet 18 → Bobot Penilaian
+
+FITUR EXPORT:
+  ├─ Export ke Excel: satu file dengan multi-sheet (replikasi format asli)
+  ├─ Export per modul (hanya MK saja, hanya CPL saja, dll.)
+  ├─ Export matriks pemetaan
+  ├─ Export ke PDF: laporan, RPS, matriks
+  └─ Cetak langsung dari browser
+
+================================================================================
+11. DAFTAR ENTITAS DATA DARI EXCEL
+================================================================================
+
+Berdasarkan analisis file Rancangan_Kurikulum_SI_Gasal_24-25.xlsx:
+
+ENTITAS UTAMA:
+  • Profil Lulusan    : 5 PL (PL1–PL5)
+  • CPL SN-Dikti      : 37 butir (S: 11, KU: 10, KK: 11, P: 5)
+  • CPL Prodi         : 14 butir (CPL01–CPL14)
+  • Bahan Kajian      : 18+ BK (BK01–BK18+)
+  • Mata Kuliah       : 66 MK (MK01–MK66), 8 semester, 144 SKS
+  • CPMK              : 145 butir (turunan dari 14 CPL)
+  • Sub-CPMK          : tersebar, sebagian sudah terisi (MK03, MK05, MK06, MK09, dll.)
+
+RELASI YANG ADA:
+  • CPL SN-Dikti ↔ CPL Prodi    (Sheet 4)  — matriks v/√
+  • CPL ↔ PL                    (Sheet 5)  — matriks v/√
+  • CPL ↔ BK                    (Sheet 7)  — matriks v/√
+  • BK ↔ MK                     (Sheet 8)  — matriks v/√
+  • CPL ↔ MK                    (Sheet 9)  — matriks v/V (ada inkonsistensi besar/kecil)
+  • CPL–BK–MK                   (Sheet 10) — format berbeda, teks multi-MK per sel
+  • CPL–CPMK–MK                 (Sheet 13) — hierarki
+  • MK–CPL–CPMK                 (Sheet 14) — per MK
+  • MK–CPMK–SubCPMK             (Sheet 15 & 22)
+  • Teknik Penilaian             (Sheet 16) — mostly kosong
+  • Bobot Penilaian              (Sheet 18) — MK01 (Agama) sudah diisi
+
+RPS YANG SUDAH ADA:
+  • ALPRO (Algoritma & Pemrograman)   — template belum lengkap
+  • DWDM (Data Warehouse & DM)        — template belum lengkap
+  • APSI (Analisis & Perancangan SI)  — paling lengkap, oleh Endang Sulistiyani
+  • MPSI (Manajemen Proyek SI)        — template belum lengkap
+
+CATATAN KUALITAS DATA (untuk proses migrasi):
+  ! Inkonsistensi: kolom CPL di Sheet 9 ada header duplikat "CPL08" (kolom 9 & 10)
+  ! Penanda centang tidak konsisten: v, V, √ — perlu normalisasi saat import
+  ! Beberapa sel di Sheet 10 berisi multi-MK dalam satu sel (perlu split)
+  ! Bobot penilaian sebagian besar masih kosong (54/66 MK belum terisi)
+  ! Sub-CPMK hanya terisi sebagian (29/66 MK)
+
+================================================================================
+12. RISIKO & MITIGASI
+================================================================================
+
+RISIKO 1: Kompleksitas relasi data (banyak tabel M:M)
+  MITIGASI: Gunakan ORM (Prisma) dengan relasi yang jelas, buat seed data
+            dari Excel untuk testing, buat diagram ERD yang diperiksa dua kali.
+
+RISIKO 2: Kualitas data Excel yang tidak konsisten
+  MITIGASI: Buat parser yang robust (normalisasi v/V/√, trim whitespace),
+            tambahkan preview + validation sebelum import, sediakan export
+            "data masalah" untuk diperbaiki manual.
+
+RISIKO 3: Editor RPS yang kompleks (form dengan 16 pertemuan + bobot)
+  MITIGASI: Gunakan komponen tabel editable yang sudah mature (TanStack Table),
+            auto-save draft, validasi per field secara real-time.
+
+RISIKO 4: Adopsi user (dosen tidak terbiasa sistem baru)
+  MITIGASI: UI yang sederhana dan familiar, training session, user manual PDF,
+            tetap sediakan export/import Excel agar transisi bertahap.
+
+RISIKO 5: Keamanan data kurikulum yang sensitif
+  MITIGASI: JWT + refresh token, HTTPS wajib, role-based access ketat,
+            backup database otomatis harian, audit log semua perubahan.
+
+RISIKO 6: Performance dengan data matriks besar (66 MK × 14 CPL × 145 CPMK)
+  MITIGASI: Index database pada foreign key, caching Redis untuk laporan,
+            lazy loading tabel besar, pagination.
+
+================================================================================
+END OF DOCUMENT
+================================================================================
+  SIKURI SI — Implementation Plan v1.0
+  Program Studi S1 Sistem Informasi
+  Universitas Nahdlatul Ulama Surabaya (UNUSA)
+================================================================================

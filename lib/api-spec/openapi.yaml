@@ -1,22 +1,42 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: SIKURI SI - Sistem Informasi Kurikulum Program Studi S1 Sistem Informasi
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: dashboard
+    description: Dashboard & statistik
+  - name: mata-kuliah
+    description: Manajemen Mata Kuliah
+  - name: cpl
+    description: Capaian Pembelajaran Lulusan Prodi
+  - name: cpmk
+    description: Capaian Pembelajaran Mata Kuliah
+  - name: sub-cpmk
+    description: Sub Capaian Pembelajaran Mata Kuliah
+  - name: pemetaan
+    description: Pemetaan / Mapping matriks
+  - name: rps
+    description: Rencana Pembelajaran Semester
+  - name: profil-lulusan
+    description: Profil Lulusan
+  - name: bahan-kajian
+    description: Bahan Kajian
+  - name: cpl-sndikti
+    description: CPL SN-Dikti
+  - name: users
+    description: Manajemen pengguna
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +44,1547 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ─── DASHBOARD ───────────────────────────────────────────────────────────────
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Statistik utama kurikulum
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /dashboard/sks-per-semester:
+    get:
+      operationId: getDashboardSksPerSemester
+      tags: [dashboard]
+      summary: Distribusi SKS per semester
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SksPerSemester"
+
+  /dashboard/kelengkapan:
+    get:
+      operationId: getDashboardKelengkapan
+      tags: [dashboard]
+      summary: Status kelengkapan dokumen kurikulum
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KelengkapanDokumen"
+
+  # ─── MATA KULIAH ──────────────────────────────────────────────────────────────
+  /mata-kuliah:
+    get:
+      operationId: listMataKuliah
+      tags: [mata-kuliah]
+      summary: Daftar semua mata kuliah
+      parameters:
+        - name: semester
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: tipe
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: search
+          in: query
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MataKuliah"
+    post:
+      operationId: createMataKuliah
+      tags: [mata-kuliah]
+      summary: Tambah mata kuliah baru
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MataKuliahInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MataKuliah"
+
+  /mata-kuliah/{id}:
+    get:
+      operationId: getMataKuliah
+      tags: [mata-kuliah]
+      summary: Detail satu mata kuliah
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MataKuliah"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateMataKuliah
+      tags: [mata-kuliah]
+      summary: Update mata kuliah
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MataKuliahUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MataKuliah"
+    delete:
+      operationId: deleteMataKuliah
+      tags: [mata-kuliah]
+      summary: Hapus mata kuliah
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── CPL PRODI ───────────────────────────────────────────────────────────────
+  /cpl:
+    get:
+      operationId: listCpl
+      tags: [cpl]
+      summary: Daftar CPL Prodi
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CplProdi"
+    post:
+      operationId: createCpl
+      tags: [cpl]
+      summary: Tambah CPL baru
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CplProdiInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CplProdi"
+
+  /cpl/{id}:
+    get:
+      operationId: getCpl
+      tags: [cpl]
+      summary: Detail CPL
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CplProdi"
+    patch:
+      operationId: updateCpl
+      tags: [cpl]
+      summary: Update CPL
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CplProdiUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CplProdi"
+    delete:
+      operationId: deleteCpl
+      tags: [cpl]
+      summary: Hapus CPL
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── CPMK ────────────────────────────────────────────────────────────────────
+  /cpmk:
+    get:
+      operationId: listCpmk
+      tags: [cpmk]
+      summary: Daftar semua CPMK
+      parameters:
+        - name: cpl_id
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Cpmk"
+    post:
+      operationId: createCpmk
+      tags: [cpmk]
+      summary: Tambah CPMK
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CpmkInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cpmk"
+
+  /cpmk/{id}:
+    patch:
+      operationId: updateCpmk
+      tags: [cpmk]
+      summary: Update CPMK
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CpmkUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cpmk"
+    delete:
+      operationId: deleteCpmk
+      tags: [cpmk]
+      summary: Hapus CPMK
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── SUB-CPMK ────────────────────────────────────────────────────────────────
+  /sub-cpmk:
+    get:
+      operationId: listSubCpmk
+      tags: [sub-cpmk]
+      summary: Daftar Sub-CPMK
+      parameters:
+        - name: mk_id
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: cpmk_id
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SubCpmk"
+    post:
+      operationId: createSubCpmk
+      tags: [sub-cpmk]
+      summary: Tambah Sub-CPMK
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubCpmkInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubCpmk"
+
+  /sub-cpmk/{id}:
+    patch:
+      operationId: updateSubCpmk
+      tags: [sub-cpmk]
+      summary: Update Sub-CPMK
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubCpmkUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubCpmk"
+    delete:
+      operationId: deleteSubCpmk
+      tags: [sub-cpmk]
+      summary: Hapus Sub-CPMK
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── PROFIL LULUSAN ───────────────────────────────────────────────────────────
+  /profil-lulusan:
+    get:
+      operationId: listProfilLulusan
+      tags: [profil-lulusan]
+      summary: Daftar Profil Lulusan
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProfilLulusan"
+    post:
+      operationId: createProfilLulusan
+      tags: [profil-lulusan]
+      summary: Tambah Profil Lulusan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfilLulusanInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfilLulusan"
+
+  /profil-lulusan/{id}:
+    patch:
+      operationId: updateProfilLulusan
+      tags: [profil-lulusan]
+      summary: Update Profil Lulusan
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfilLulusanUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfilLulusan"
+    delete:
+      operationId: deleteProfilLulusan
+      tags: [profil-lulusan]
+      summary: Hapus Profil Lulusan
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── BAHAN KAJIAN ─────────────────────────────────────────────────────────────
+  /bahan-kajian:
+    get:
+      operationId: listBahanKajian
+      tags: [bahan-kajian]
+      summary: Daftar Bahan Kajian
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BahanKajian"
+    post:
+      operationId: createBahanKajian
+      tags: [bahan-kajian]
+      summary: Tambah Bahan Kajian
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BahanKajianInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BahanKajian"
+
+  /bahan-kajian/{id}:
+    patch:
+      operationId: updateBahanKajian
+      tags: [bahan-kajian]
+      summary: Update Bahan Kajian
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BahanKajianUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BahanKajian"
+    delete:
+      operationId: deleteBahanKajian
+      tags: [bahan-kajian]
+      summary: Hapus Bahan Kajian
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── CPL SN-DIKTI ─────────────────────────────────────────────────────────────
+  /cpl-sndikti:
+    get:
+      operationId: listCplSndikti
+      tags: [cpl-sndikti]
+      summary: Daftar CPL SN-Dikti
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CplSndikti"
+
+  # ─── PEMETAAN ─────────────────────────────────────────────────────────────────
+  /pemetaan/cpl-mk:
+    get:
+      operationId: getPemetaanCplMk
+      tags: [pemetaan]
+      summary: Matriks pemetaan CPL ke Mata Kuliah
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PemetaanCplMk"
+
+  /pemetaan/cpl-mk/toggle:
+    post:
+      operationId: togglePemetaanCplMk
+      tags: [pemetaan]
+      summary: Toggle relasi CPL-MK
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PemetaanToggle"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PemetaanToggleResult"
+
+  /pemetaan/cpl-bk:
+    get:
+      operationId: getPemetaanCplBk
+      tags: [pemetaan]
+      summary: Matriks pemetaan CPL ke Bahan Kajian
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PemetaanCplBk"
+
+  /pemetaan/cpl-bk/toggle:
+    post:
+      operationId: togglePemetaanCplBk
+      tags: [pemetaan]
+      summary: Toggle relasi CPL-BK
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PemetaanToggle"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PemetaanToggleResult"
+
+  /pemetaan/bk-mk:
+    get:
+      operationId: getPemetaanBkMk
+      tags: [pemetaan]
+      summary: Matriks pemetaan Bahan Kajian ke MK
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PemetaanBkMk"
+
+  /pemetaan/bk-mk/toggle:
+    post:
+      operationId: togglePemetaanBkMk
+      tags: [pemetaan]
+      summary: Toggle relasi BK-MK
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PemetaanToggle"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PemetaanToggleResult"
+
+  /pemetaan/cpl-mk-cpmk:
+    get:
+      operationId: getPemetaanCplMkCpmk
+      tags: [pemetaan]
+      summary: Hierarki CPL → CPMK → MK
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HierarklCplCpmkMk"
+
+  /pemetaan/cpl-pl:
+    get:
+      operationId: getPemetaanCplPl
+      tags: [pemetaan]
+      summary: Matriks pemetaan CPL ke Profil Lulusan
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PemetaanCplPl"
+
+  /pemetaan/cpl-pl/toggle:
+    post:
+      operationId: togglePemetaanCplPl
+      tags: [pemetaan]
+      summary: Toggle relasi CPL-PL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PemetaanToggle"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PemetaanToggleResult"
+
+  /pemetaan/mk-cpmk/toggle:
+    post:
+      operationId: togglePemetaanMkCpmk
+      tags: [pemetaan]
+      summary: Toggle relasi MK-CPMK
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PemetaanToggle"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PemetaanToggleResult"
+
+  # ─── RPS ──────────────────────────────────────────────────────────────────────
+  /rps:
+    get:
+      operationId: listRps
+      tags: [rps]
+      summary: Daftar RPS
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: semester
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Rps"
+    post:
+      operationId: createRps
+      tags: [rps]
+      summary: Buat RPS baru
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RpsInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rps"
+
+  /rps/{id}:
+    get:
+      operationId: getRps
+      tags: [rps]
+      summary: Detail RPS dengan pertemuan
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RpsDetail"
+    patch:
+      operationId: updateRps
+      tags: [rps]
+      summary: Update header RPS
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RpsUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rps"
+    delete:
+      operationId: deleteRps
+      tags: [rps]
+      summary: Hapus RPS
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /rps/{id}/pertemuan:
+    get:
+      operationId: listRpsPertemuan
+      tags: [rps]
+      summary: Daftar pertemuan RPS
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RpsPertemuan"
+    post:
+      operationId: upsertRpsPertemuan
+      tags: [rps]
+      summary: Simpan pertemuan RPS (bulk upsert)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RpsPertemuanBulkInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RpsPertemuan"
+
+  /rps/{id}/status:
+    patch:
+      operationId: updateRpsStatus
+      tags: [rps]
+      summary: Ubah status RPS (DRAFT/REVIEW/LENGKAP/REVISI)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RpsStatusUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rps"
+
+  # ─── USERS ────────────────────────────────────────────────────────────────────
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: Daftar pengguna
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+    post:
+      operationId: createUser
+      tags: [users]
+      summary: Tambah pengguna
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/{id}:
+    patch:
+      operationId: updateUser
+      tags: [users]
+      summary: Update pengguna
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    delete:
+      operationId: deleteUser
+      tags: [users]
+      summary: Hapus pengguna
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [users]
+      summary: Login pengguna
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResult"
+        "401":
+          description: Unauthorized
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [users]
+      summary: Logout
+      responses:
+        "200":
+          description: OK
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [users]
+      summary: Info user yang sedang login
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    # ── Dashboard ──────────────────────────────────────────────────────────────
+    DashboardStats:
+      type: object
+      required: [totalMataKuliah, totalCpl, totalCpmk, totalSks, totalRps, rpsLengkap]
+      properties:
+        totalMataKuliah:  { type: integer }
+        totalCpl:         { type: integer }
+        totalCpmk:        { type: integer }
+        totalSks:         { type: integer }
+        totalRps:         { type: integer }
+        rpsLengkap:       { type: integer }
+
+    SksPerSemester:
+      type: object
+      required: [semester, totalSks, jumlahMk]
+      properties:
+        semester:   { type: integer }
+        totalSks:   { type: integer }
+        jumlahMk:   { type: integer }
+
+    KelengkapanDokumen:
+      type: object
+      required: [rpsTersusun, rpsTersusunTotal, pemetaanCplMk, pemetaanCplMkTotal, cpmkTerdefinisi, cpmkTerdefinisiTotal, bobotPenilaian, bobotPenilaianTotal, subCpmkTerisi, subCpmkTerisiTotal]
+      properties:
+        rpsTersusun:           { type: integer }
+        rpsTersusunTotal:      { type: integer }
+        pemetaanCplMk:         { type: integer }
+        pemetaanCplMkTotal:    { type: integer }
+        cpmkTerdefinisi:       { type: integer }
+        cpmkTerdefinisiTotal:  { type: integer }
+        bobotPenilaian:        { type: integer }
+        bobotPenilaianTotal:   { type: integer }
+        subCpmkTerisi:         { type: integer }
+        subCpmkTerisiTotal:    { type: integer }
+
+    # ── Mata Kuliah ────────────────────────────────────────────────────────────
+    MataKuliah:
+      type: object
+      required: [id, kode, nama, sks, semester, tipe]
+      properties:
+        id:             { type: integer }
+        kode:           { type: string }
+        nama:           { type: string }
+        sks:            { type: integer }
+        semester:       { type: integer }
+        tipe:           { type: string }
+        kelompok:       { type: ["string", "null"] }
+        dosenPengampu:  { type: ["string", "null"] }
+        isAktif:        { type: boolean }
+        mbkm:           { type: boolean }
+        statusRps:      { type: ["string", "null"] }
+        createdAt:      { type: string }
+        updatedAt:      { type: string }
+
+    MataKuliahInput:
+      type: object
+      required: [kode, nama, sks, semester, tipe]
+      properties:
+        kode:           { type: string }
+        nama:           { type: string }
+        sks:            { type: integer, minimum: 1, maximum: 6 }
+        semester:       { type: integer, minimum: 1, maximum: 8 }
+        tipe:           { type: string }
+        kelompok:       { type: string }
+        dosenPengampu:  { type: string }
+        isAktif:        { type: boolean }
+        mbkm:           { type: boolean }
+
+    MataKuliahUpdate:
+      type: object
+      properties:
+        kode:           { type: string }
+        nama:           { type: string }
+        sks:            { type: integer, minimum: 1, maximum: 6 }
+        semester:       { type: integer, minimum: 1, maximum: 8 }
+        tipe:           { type: string }
+        kelompok:       { type: string }
+        dosenPengampu:  { type: string }
+        isAktif:        { type: boolean }
+        mbkm:           { type: boolean }
+
+    # ── CPL Prodi ──────────────────────────────────────────────────────────────
+    CplProdi:
+      type: object
+      required: [id, kode, deskripsi]
+      properties:
+        id:          { type: integer }
+        kode:        { type: string }
+        deskripsi:   { type: string }
+        jumlahMk:    { type: integer }
+        jumlahCpmk:  { type: integer }
+        createdAt:   { type: string }
+        updatedAt:   { type: string }
+
+    CplProdiInput:
+      type: object
+      required: [kode, deskripsi]
+      properties:
+        kode:       { type: string }
+        deskripsi:  { type: string }
+
+    CplProdiUpdate:
+      type: object
+      properties:
+        kode:       { type: string }
+        deskripsi:  { type: string }
+
+    # ── CPMK ──────────────────────────────────────────────────────────────────
+    Cpmk:
+      type: object
+      required: [id, kode, cplProdiId, deskripsi]
+      properties:
+        id:           { type: integer }
+        kode:         { type: string }
+        cplProdiId:   { type: integer }
+        cplKode:      { type: ["string", "null"] }
+        deskripsi:    { type: string }
+        createdAt:    { type: string }
+        updatedAt:    { type: string }
+
+    CpmkInput:
+      type: object
+      required: [kode, cplProdiId, deskripsi]
+      properties:
+        kode:        { type: string }
+        cplProdiId:  { type: integer }
+        deskripsi:   { type: string }
+
+    CpmkUpdate:
+      type: object
+      properties:
+        kode:        { type: string }
+        cplProdiId:  { type: integer }
+        deskripsi:   { type: string }
+
+    # ── Sub-CPMK ──────────────────────────────────────────────────────────────
+    SubCpmk:
+      type: object
+      required: [id, kode, cpmkId, mkId, deskripsi, urutan]
+      properties:
+        id:        { type: integer }
+        kode:      { type: string }
+        cpmkId:    { type: integer }
+        mkId:      { type: integer }
+        deskripsi: { type: string }
+        urutan:    { type: integer }
+        createdAt: { type: string }
+
+    SubCpmkInput:
+      type: object
+      required: [kode, cpmkId, mkId, deskripsi, urutan]
+      properties:
+        kode:      { type: string }
+        cpmkId:    { type: integer }
+        mkId:      { type: integer }
+        deskripsi: { type: string }
+        urutan:    { type: integer }
+
+    SubCpmkUpdate:
+      type: object
+      properties:
+        kode:      { type: string }
+        deskripsi: { type: string }
+        urutan:    { type: integer }
+
+    # ── Profil Lulusan ─────────────────────────────────────────────────────────
+    ProfilLulusan:
+      type: object
+      required: [id, kode, deskripsi]
+      properties:
+        id:         { type: integer }
+        kode:       { type: string }
+        deskripsi:  { type: string }
+        tipe:       { type: ["string", "null"] }
+        referensi:  { type: ["string", "null"] }
+        createdAt:  { type: string }
+        updatedAt:  { type: string }
+
+    ProfilLulusanInput:
+      type: object
+      required: [kode, deskripsi]
+      properties:
+        kode:      { type: string }
+        deskripsi: { type: string }
+        tipe:      { type: string }
+        referensi: { type: string }
+
+    ProfilLulusanUpdate:
+      type: object
+      properties:
+        kode:      { type: string }
+        deskripsi: { type: string }
+        tipe:      { type: string }
+        referensi: { type: string }
+
+    # ── Bahan Kajian ───────────────────────────────────────────────────────────
+    BahanKajian:
+      type: object
+      required: [id, kode, nama]
+      properties:
+        id:        { type: integer }
+        kode:      { type: string }
+        nama:      { type: string }
+        createdAt: { type: string }
+
+    BahanKajianInput:
+      type: object
+      required: [kode, nama]
+      properties:
+        kode: { type: string }
+        nama: { type: string }
+
+    BahanKajianUpdate:
+      type: object
+      properties:
+        kode: { type: string }
+        nama: { type: string }
+
+    # ── CPL SN-Dikti ───────────────────────────────────────────────────────────
+    CplSndikti:
+      type: object
+      required: [id, kode, kelompok, deskripsi]
+      properties:
+        id:         { type: integer }
+        kode:       { type: string }
+        kelompok:   { type: string }
+        deskripsi:  { type: string }
+        createdAt:  { type: string }
+
+    # ── Pemetaan ───────────────────────────────────────────────────────────────
+    PemetaanCplMk:
+      type: object
+      required: [cpls, mataKuliahs, matrix]
+      properties:
+        cpls:
+          type: array
+          items:
+            type: object
+            required: [id, kode]
+            properties:
+              id:   { type: integer }
+              kode: { type: string }
+        mataKuliahs:
+          type: array
+          items:
+            type: object
+            required: [id, kode, nama, semester]
+            properties:
+              id:       { type: integer }
+              kode:     { type: string }
+              nama:     { type: string }
+              semester: { type: integer }
+        matrix:
+          type: object
+          description: "map mkId -> cplId -> boolean"
+          additionalProperties:
+            type: object
+            additionalProperties:
+              type: boolean
+
+    PemetaanCplBk:
+      type: object
+      required: [cpls, bahanKajians, matrix]
+      properties:
+        cpls:
+          type: array
+          items:
+            type: object
+            required: [id, kode]
+            properties:
+              id:   { type: integer }
+              kode: { type: string }
+        bahanKajians:
+          type: array
+          items:
+            type: object
+            required: [id, kode, nama]
+            properties:
+              id:   { type: integer }
+              kode: { type: string }
+              nama: { type: string }
+        matrix:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties:
+              type: boolean
+
+    PemetaanBkMk:
+      type: object
+      required: [bahanKajians, mataKuliahs, matrix]
+      properties:
+        bahanKajians:
+          type: array
+          items:
+            type: object
+            required: [id, kode, nama]
+            properties:
+              id:   { type: integer }
+              kode: { type: string }
+              nama: { type: string }
+        mataKuliahs:
+          type: array
+          items:
+            type: object
+            required: [id, kode, nama]
+            properties:
+              id:   { type: integer }
+              kode: { type: string }
+              nama: { type: string }
+        matrix:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties:
+              type: boolean
+
+    PemetaanCplPl:
+      type: object
+      required: [cpls, profilLulusans, matrix]
+      properties:
+        cpls:
+          type: array
+          items:
+            type: object
+            required: [id, kode]
+            properties:
+              id:   { type: integer }
+              kode: { type: string }
+        profilLulusans:
+          type: array
+          items:
+            type: object
+            required: [id, kode]
+            properties:
+              id:   { type: integer }
+              kode: { type: string }
+        matrix:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties:
+              type: boolean
+
+    HierarklCplCpmkMk:
+      type: object
+      required: [cplId, cplKode, cplDeskripsi, cpmks]
+      properties:
+        cplId:       { type: integer }
+        cplKode:     { type: string }
+        cplDeskripsi: { type: string }
+        cpmks:
+          type: array
+          items:
+            type: object
+            required: [cpmkId, cpmkKode, cpmkDeskripsi, mataKuliahs]
+            properties:
+              cpmkId:        { type: integer }
+              cpmkKode:      { type: string }
+              cpmkDeskripsi: { type: string }
+              mataKuliahs:
+                type: array
+                items:
+                  type: object
+                  required: [id, kode, nama]
+                  properties:
+                    id:   { type: integer }
+                    kode: { type: string }
+                    nama: { type: string }
+
+    PemetaanToggle:
+      type: object
+      required: [rowId, colId]
+      properties:
+        rowId: { type: integer }
+        colId: { type: integer }
+
+    PemetaanToggleResult:
+      type: object
+      required: [active]
+      properties:
+        active: { type: boolean }
+
+    # ── RPS ────────────────────────────────────────────────────────────────────
+    Rps:
+      type: object
+      required: [id, mkId, status]
+      properties:
+        id:                 { type: integer }
+        mkId:               { type: integer }
+        mkKode:             { type: ["string", "null"] }
+        mkNama:             { type: ["string", "null"] }
+        mkSemester:         { type: ["integer", "null"] }
+        kodeDokumen:        { type: ["string", "null"] }
+        tanggalPenyusunan:  { type: ["string", "null"] }
+        dosenPengembang:    { type: ["string", "null"] }
+        koordinatorBk:      { type: ["string", "null"] }
+        kaprodi:            { type: ["string", "null"] }
+        status:             { type: string }
+        versi:              { type: integer }
+        catatanRevisi:      { type: ["string", "null"] }
+        createdAt:          { type: string }
+        updatedAt:          { type: string }
+
+    RpsDetail:
+      type: object
+      required: [id, mkId, status, pertemuans]
+      properties:
+        id:                 { type: integer }
+        mkId:               { type: integer }
+        mkKode:             { type: ["string", "null"] }
+        mkNama:             { type: ["string", "null"] }
+        mkSemester:         { type: ["integer", "null"] }
+        kodeDokumen:        { type: ["string", "null"] }
+        tanggalPenyusunan:  { type: ["string", "null"] }
+        dosenPengembang:    { type: ["string", "null"] }
+        koordinatorBk:      { type: ["string", "null"] }
+        kaprodi:            { type: ["string", "null"] }
+        status:             { type: string }
+        versi:              { type: integer }
+        catatanRevisi:      { type: ["string", "null"] }
+        createdAt:          { type: string }
+        updatedAt:          { type: string }
+        pertemuans:
+          type: array
+          items:
+            $ref: "#/components/schemas/RpsPertemuan"
+
+    RpsInput:
+      type: object
+      required: [mkId]
+      properties:
+        mkId:               { type: integer }
+        kodeDokumen:        { type: string }
+        tanggalPenyusunan:  { type: string }
+        dosenPengembang:    { type: string }
+        koordinatorBk:      { type: string }
+        kaprodi:            { type: string }
+
+    RpsUpdate:
+      type: object
+      properties:
+        kodeDokumen:        { type: string }
+        tanggalPenyusunan:  { type: string }
+        dosenPengembang:    { type: string }
+        koordinatorBk:      { type: string }
+        kaprodi:            { type: string }
+        catatanRevisi:      { type: string }
+
+    RpsStatusUpdate:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [DRAFT, REVIEW, LENGKAP, REVISI]
+
+    RpsPertemuan:
+      type: object
+      required: [id, rpsId, pertemuanKe]
+      properties:
+        id:                  { type: integer }
+        rpsId:               { type: integer }
+        pertemuanKe:         { type: integer }
+        subCpmkId:           { type: ["integer", "null"] }
+        materi:              { type: ["string", "null"] }
+        metodePembelajaran:  { type: ["string", "null"] }
+        aktivitas:           { type: ["string", "null"] }
+        media:               { type: ["string", "null"] }
+        waktuMenit:          { type: ["integer", "null"] }
+        referensi:           { type: ["string", "null"] }
+        indikator:           { type: ["string", "null"] }
+        bobotNilai:          { type: ["integer", "null"] }
+        createdAt:           { type: string }
+
+    RpsPertemuanBulkInput:
+      type: object
+      required: [pertemuans]
+      properties:
+        pertemuans:
+          type: array
+          items:
+            type: object
+            required: [pertemuanKe]
+            properties:
+              pertemuanKe:         { type: integer }
+              subCpmkId:           { type: ["integer", "null"] }
+              materi:              { type: ["string", "null"] }
+              metodePembelajaran:  { type: ["string", "null"] }
+              aktivitas:           { type: ["string", "null"] }
+              media:               { type: ["string", "null"] }
+              waktuMenit:          { type: ["integer", "null"] }
+              referensi:           { type: ["string", "null"] }
+              indikator:           { type: ["string", "null"] }
+              bobotNilai:          { type: ["integer", "null"] }
+
+    # ── Users ──────────────────────────────────────────────────────────────────
+    User:
+      type: object
+      required: [id, nama, email, role, isAktif]
+      properties:
+        id:        { type: integer }
+        nama:      { type: string }
+        email:     { type: string }
+        role:      { type: string }
+        isAktif:   { type: boolean }
+        lastLogin: { type: ["string", "null"] }
+        createdAt: { type: string }
+
+    UserInput:
+      type: object
+      required: [nama, email, password, role]
+      properties:
+        nama:     { type: string }
+        email:    { type: string }
+        password: { type: string }
+        role:     { type: string }
+        isAktif:  { type: boolean }
+
+    UserUpdate:
+      type: object
+      properties:
+        nama:    { type: string }
+        email:   { type: string }
+        role:    { type: string }
+        isAktif: { type: boolean }
+
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:    { type: string }
+        password: { type: string }
+
+    LoginResult:
+      type: object
+      required: [user, token]
+      properties:
+        user:  { $ref: "#/components/schemas/User" }
+        token: { type: string }
