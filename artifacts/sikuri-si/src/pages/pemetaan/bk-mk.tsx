@@ -21,7 +21,8 @@ export default function PemetaanBkMk() {
     });
     try {
       await toggleMutation.mutateAsync({ data: { rowId, colId } });
-      qc.invalidateQueries({ queryKey: getGetPemetaanBkMkQueryKey() });
+      await qc.invalidateQueries({ queryKey: getGetPemetaanBkMkQueryKey() });
+      setLocalMatrix(null);
     } catch {
       setLocalMatrix((prev) => {
         const base = prev ?? {};

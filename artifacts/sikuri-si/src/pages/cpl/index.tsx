@@ -4,8 +4,15 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -41,7 +48,7 @@ export default function CplPage() {
         await updateMutation.mutateAsync({ id: editItem.id, data: form });
         toast({ title: "CPL berhasil diperbarui" });
       }
-      invalidate();
+      await invalidate();
       closeModal();
     } catch {
       toast({ title: "Gagal menyimpan", variant: "destructive" });
@@ -53,7 +60,7 @@ export default function CplPage() {
     try {
       await deleteMutation.mutateAsync({ id: cpl.id });
       toast({ title: "CPL dihapus" });
-      invalidate();
+      await invalidate();
     } catch {
       toast({ title: "Gagal menghapus", variant: "destructive" });
     }
@@ -71,35 +78,84 @@ export default function CplPage() {
         </Button>
       </div>
 
-      <div className="grid gap-3">
-        {isLoading ? (
-          Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-lg" />)
-        ) : (cpls ?? []).map((cpl) => (
-          <Card key={cpl.id} data-testid={`card-cpl-${cpl.id}`}>
-            <CardContent className="p-4 flex items-start justify-between gap-4">
-              <div className="flex items-start gap-3 flex-1 min-w-0">
-                <div className="w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                  <span className="font-bold text-primary text-sm">{cpl.kode}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm leading-relaxed">{cpl.deskripsi}</p>
-                  <div className="flex gap-2 mt-2">
-                    <Badge variant="outline" className="text-xs">{cpl.jumlahMk} MK</Badge>
-                    <Badge variant="outline" className="text-xs">{cpl.jumlahCpmk} CPMK</Badge>
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-1 shrink-0">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(cpl)} data-testid={`button-edit-cpl-${cpl.id}`}>
-                  <Pencil className="h-3.5 w-3.5" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(cpl)} data-testid={`button-delete-cpl-${cpl.id}`}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="rounded-xl border border-border bg-card shadow-2xs overflow-hidden">
+        <div className="overflow-x-auto scroll-smooth scrollbar-custom">
+          <Table className="w-full min-w-[800px] table-fixed">
+            <TableHeader className="bg-muted/30">
+              <TableRow>
+                <TableHead className="w-[110px] font-semibold text-foreground/80 pl-4 py-3">Kode CPL</TableHead>
+                <TableHead className="font-semibold text-foreground/80 py-3">Deskripsi</TableHead>
+                <TableHead className="w-[180px] font-semibold text-foreground/80 py-3">Pemetaan</TableHead>
+                <TableHead className="w-[110px] font-semibold text-foreground/80 text-right pr-4 py-3">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="pl-4 py-3.5"><Skeleton className="h-6 w-16" /></TableCell>
+                    <TableCell className="py-3.5"><Skeleton className="h-5 w-[85%]" /></TableCell>
+                    <TableCell className="py-3.5"><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell className="pr-4 py-3.5 text-right"><Skeleton className="h-8 w-16 ml-auto" /></TableCell>
+                  </TableRow>
+                ))
+              ) : (cpls ?? []).length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
+                    Tidak ada data CPL Prodi.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                (cpls ?? []).map((cpl) => (
+                  <TableRow key={cpl.id} className="hover:bg-muted/10 transition-colors" data-testid={`row-cpl-${cpl.id}`}>
+                    <TableCell className="pl-4 py-3.5 align-top">
+                      <span className="inline-flex items-center justify-center font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-md text-xs tracking-wider border border-primary/15">
+                        {cpl.kode}
+                      </span>
+                    </TableCell>
+                    <TableCell className="py-3.5 align-top whitespace-normal break-words leading-relaxed text-sm font-normal text-foreground/90 pr-6">
+                      {cpl.deskripsi}
+                    </TableCell>
+                    <TableCell className="py-3.5 align-top">
+                      <div className="flex gap-1.5 mt-0.5">
+                        <Badge variant="outline" className="text-xs font-medium border-border bg-background px-2 py-0.5">
+                          {cpl.jumlahMk} MK
+                        </Badge>
+                        <Badge variant="outline" className="text-xs font-medium border-border bg-background px-2 py-0.5">
+                          {cpl.jumlahCpmk} CPMK
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell className="pr-4 py-3.5 align-top text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8 hover:bg-primary/10 hover:text-primary border-border/80 shadow-2xs transition-all duration-200"
+                          onClick={() => openEdit(cpl)}
+                          title="Edit CPL"
+                          data-testid={`button-edit-cpl-${cpl.id}`}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive border-border/80 shadow-2xs transition-all duration-200"
+                          onClick={() => handleDelete(cpl)}
+                          title="Hapus CPL"
+                          data-testid={`button-delete-cpl-${cpl.id}`}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       <Dialog open={isCreate || !!editItem} onOpenChange={closeModal}>

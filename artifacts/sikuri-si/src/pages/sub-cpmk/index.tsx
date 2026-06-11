@@ -24,8 +24,8 @@ export default function SubCpmkPage() {
   const { toast } = useToast();
 
   const { data: subCpmks, isLoading } = useListSubCpmk();
-  const { data: cpmks } = useListCpmk(undefined, { query: { queryKey: getListCpmkQueryKey() } });
-  const { data: mataKuliahs } = useListMataKuliah(undefined, { query: { queryKey: getListMataKuliahQueryKey() } });
+  const { data: cpmks } = useListCpmk();
+  const { data: mataKuliahs } = useListMataKuliah();
   const createMutation = useCreateSubCpmk();
   const updateMutation = useUpdateSubCpmk();
   const deleteMutation = useDeleteSubCpmk();
@@ -47,7 +47,7 @@ export default function SubCpmkPage() {
         await updateMutation.mutateAsync({ id: editItem.id, data: { kode: form.kode, deskripsi: form.deskripsi, urutan: form.urutan } });
         toast({ title: "Sub-CPMK berhasil diperbarui" });
       }
-      invalidate();
+      await invalidate();
       setEditItem(null); setIsCreate(false);
     } catch {
       toast({ title: "Gagal menyimpan", variant: "destructive" });
@@ -59,7 +59,7 @@ export default function SubCpmkPage() {
     try {
       await deleteMutation.mutateAsync({ id: s.id });
       toast({ title: "Sub-CPMK dihapus" });
-      invalidate();
+      await invalidate();
     } catch {
       toast({ title: "Gagal menghapus", variant: "destructive" });
     }
@@ -124,14 +124,14 @@ export default function SubCpmkPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Mata Kuliah</Label>
-                <Select value={form.mkId ? String(form.mkId) : ""} onValueChange={(v) => setForm({ ...form, mkId: Number(v) })} disabled={!!editItem}>
+                <Select value={form.mkId ? String(form.mkId) : undefined} onValueChange={(v) => setForm({ ...form, mkId: Number(v) })} disabled={!!editItem}>
                   <SelectTrigger data-testid="select-mk-sub-cpmk"><SelectValue placeholder="Pilih MK..." /></SelectTrigger>
                   <SelectContent>{(mataKuliahs ?? []).map(m => <SelectItem key={m.id} value={String(m.id)}>{m.kode} — {m.nama}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
                 <Label>CPMK Induk</Label>
-                <Select value={form.cpmkId ? String(form.cpmkId) : ""} onValueChange={(v) => setForm({ ...form, cpmkId: Number(v) })} disabled={!!editItem}>
+                <Select value={form.cpmkId ? String(form.cpmkId) : undefined} onValueChange={(v) => setForm({ ...form, cpmkId: Number(v) })} disabled={!!editItem}>
                   <SelectTrigger data-testid="select-cpmk-sub-cpmk"><SelectValue placeholder="Pilih CPMK..." /></SelectTrigger>
                   <SelectContent>{(cpmks ?? []).map(c => <SelectItem key={c.id} value={String(c.id)}>{c.kode}</SelectItem>)}</SelectContent>
                 </Select>

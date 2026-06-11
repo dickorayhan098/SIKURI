@@ -24,7 +24,7 @@ export default function CpmkPage() {
   const { toast } = useToast();
 
   const { data: cpmks, isLoading } = useListCpmk();
-  const { data: cpls } = useListCpl({ query: { queryKey: getListCplQueryKey() } });
+  const { data: cpls } = useListCpl();
   const createMutation = useCreateCpmk();
   const updateMutation = useUpdateCpmk();
   const deleteMutation = useDeleteCpmk();
@@ -47,7 +47,7 @@ export default function CpmkPage() {
         await updateMutation.mutateAsync({ id: editItem.id, data: form });
         toast({ title: "CPMK berhasil diperbarui" });
       }
-      invalidate();
+      await invalidate();
       setEditItem(null); setIsCreate(false);
     } catch {
       toast({ title: "Gagal menyimpan", variant: "destructive" });
@@ -59,7 +59,7 @@ export default function CpmkPage() {
     try {
       await deleteMutation.mutateAsync({ id: c.id });
       toast({ title: "CPMK dihapus" });
-      invalidate();
+      await invalidate();
     } catch {
       toast({ title: "Gagal menghapus", variant: "destructive" });
     }
@@ -84,7 +84,7 @@ export default function CpmkPage() {
           <CardHeader className="py-3 px-4 bg-muted/30 border-b">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <Badge className="text-xs">{cplKode}</Badge>
-              <span className="text-muted-foreground font-normal">{cpls?.find(c => c.kode === cplKode)?.deskripsi?.slice(0, 80)}{items.length > 0 ? "" : ""}</span>
+              <span className="text-muted-foreground font-normal">{cpls?.find(c => c.kode === cplKode)?.deskripsi?.slice(0, 80) ?? ""}{items.length > 0 ? "" : ""}</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -120,9 +120,9 @@ export default function CpmkPage() {
           <div className="grid gap-4 py-2">
             <div className="space-y-1.5">
               <Label>CPL Induk</Label>
-              <Select value={form.cplProdiId ? String(form.cplProdiId) : ""} onValueChange={(v) => setForm({ ...form, cplProdiId: Number(v) })}>
+              <Select value={form.cplProdiId ? String(form.cplProdiId) : undefined} onValueChange={(v) => setForm({ ...form, cplProdiId: Number(v) })}>
                 <SelectTrigger data-testid="select-cpl-cpmk"><SelectValue placeholder="Pilih CPL..." /></SelectTrigger>
-                <SelectContent>{(cpls ?? []).map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.kode} — {c.deskripsi.slice(0, 50)}</SelectItem>)}</SelectContent>
+                <SelectContent>{(cpls ?? []).map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.kode} — {c.deskripsi?.slice(0, 50) ?? ""}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
