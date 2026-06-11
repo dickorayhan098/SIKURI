@@ -1,3 +1,4 @@
 - [API server bundle staleness](api-server-bundle.md) — new route files won't appear until a rebuild; dev workflow rebuilds on restart
 - [Hook call signatures](hook-signatures.md) — list hooks without path params take 1 arg; hooks with params take 2; queryKey is required if passing UseQueryOptions directly
 - [Express early return pattern](express-early-return.md) — use `{ toast(...); return; }` not `return toast(...)` in async handlers to satisfy TS strict return checks
+- [Auth token injection](auth-token-injection.md) — must call setAuthTokenGetter(() => localStorage.getItem("token")) at module load to attach Bearer header to all API requests
