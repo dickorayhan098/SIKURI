@@ -2,11 +2,10 @@
     "buildCommand": "pnpm run build:vercel",
     "outputDirectory": "artifacts/sikuri-si/dist/public",
     "installCommand": "pnpm install --no-frozen-lockfile",
-    "framework": "vite",
     "rewrites": [
         {
             "source": "/api/(.*)",
-            "destination": "/api"
+            "destination": "/api/index.mjs"
         },
         {
             "source": "/(.*)",
