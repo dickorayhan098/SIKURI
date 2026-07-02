@@ -8,12 +8,13 @@ import { eq, and } from "drizzle-orm";
 
 const router = Router();
 
-function formatRps(rps: typeof rpsTable.$inferSelect, mk?: { kode: string | null; nama: string | null; semester: number | null }) {
+function formatRps(rps: typeof rpsTable.$inferSelect, mk?: { kode: string | null; nama: string | null; semester: number | null; dosenPengampu?: string | null }) {
   return {
     ...rps,
     mkKode: mk?.kode ?? null,
     mkNama: mk?.nama ?? null,
     mkSemester: mk?.semester ?? null,
+    mkDosenPengampu: mk?.dosenPengampu ?? null,
     createdAt: rps.createdAt.toISOString(),
     updatedAt: rps.updatedAt.toISOString(),
     tanggalPenyusunan: rps.tanggalPenyusunan ?? null,
@@ -34,6 +35,7 @@ router.get("/", async (req, res) => {
         mkKode: mataKuliahTable.kode,
         mkNama: mataKuliahTable.nama,
         mkSemester: mataKuliahTable.semester,
+        mkDosenPengampu: mataKuliahTable.dosenPengampu,
       })
       .from(rpsTable)
       .leftJoin(mataKuliahTable, eq(mataKuliahTable.id, rpsTable.mkId))
@@ -44,7 +46,7 @@ router.get("/", async (req, res) => {
       ? rows.filter((r) => r.mkSemester === params.semester)
       : rows;
 
-    res.json(filtered.map((r) => formatRps(r.rps, { kode: r.mkKode ?? null, nama: r.mkNama ?? null, semester: r.mkSemester ?? null })));
+    res.json(filtered.map((r) => formatRps(r.rps, { kode: r.mkKode ?? null, nama: r.mkNama ?? null, semester: r.mkSemester ?? null, dosenPengampu: r.mkDosenPengampu ?? null })));
   } catch (err) {
     req.log.error({ err }, "Failed to list RPS");
     res.status(500).json({ error: "Internal server error" });
@@ -85,7 +87,7 @@ router.get("/:id", async (req, res) => {
 
   try {
     const [row] = await db
-      .select({ rps: rpsTable, mkKode: mataKuliahTable.kode, mkNama: mataKuliahTable.nama, mkSemester: mataKuliahTable.semester })
+      .select({ rps: rpsTable, mkKode: mataKuliahTable.kode, mkNama: mataKuliahTable.nama, mkSemester: mataKuliahTable.semester, mkDosenPengampu: mataKuliahTable.dosenPengampu })
       .from(rpsTable)
       .leftJoin(mataKuliahTable, eq(mataKuliahTable.id, rpsTable.mkId))
       .where(eq(rpsTable.id, params.data.id));
@@ -95,7 +97,7 @@ router.get("/:id", async (req, res) => {
     const pertemuans = await db.select().from(rpsPertemuanTable).where(eq(rpsPertemuanTable.rpsId, params.data.id)).orderBy(rpsPertemuanTable.pertemuanKe);
 
     res.json({
-      ...formatRps(row.rps, { kode: row.mkKode ?? null, nama: row.mkNama ?? null, semester: row.mkSemester ?? null }),
+      ...formatRps(row.rps, { kode: row.mkKode ?? null, nama: row.mkNama ?? null, semester: row.mkSemester ?? null, dosenPengampu: row.mkDosenPengampu ?? null }),
       pertemuans: pertemuans.map((p) => ({ ...p, createdAt: p.createdAt.toISOString() })),
     });
   } catch (err) {

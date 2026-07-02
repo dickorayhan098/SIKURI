@@ -56,9 +56,9 @@ export default function RpsDetail() {
   const effectivePertemuans = pertemuans ?? (rps?.pertemuans?.length ? rps.pertemuans.map(p => ({ pertemuanKe: p.pertemuanKe, subCpmkId: p.subCpmkId, materi: p.materi, metodePembelajaran: p.metodePembelajaran, aktivitas: p.aktivitas, media: p.media, waktuMenit: p.waktuMenit, referensi: p.referensi, indikator: p.indikator, bobotNilai: p.bobotNilai })) : initPertemuans());
 
   const header = headerForm ?? {
-    kodeDokumen: rps?.kodeDokumen ?? "",
+    kodeDokumen: rps?.kodeDokumen || (rps?.mkKode ? `RPS/${rps.mkKode}` : ""),
     tanggalPenyusunan: rps?.tanggalPenyusunan ?? "",
-    dosenPengembang: rps?.dosenPengembang ?? "",
+    dosenPengembang: rps?.dosenPengembang || (rps as any)?.mkDosenPengampu || "",
     koordinatorBk: rps?.koordinatorBk ?? "",
     kaprodi: rps?.kaprodi ?? "",
   };
@@ -148,7 +148,7 @@ export default function RpsDetail() {
             {[
               { key: "kodeDokumen", label: "Kode Dokumen" },
               { key: "tanggalPenyusunan", label: "Tanggal Penyusunan" },
-              { key: "dosenPengembang", label: "Dosen Pengembang" },
+              { key: "dosenPengembang", label: "Dosen Pengampu" },
               { key: "koordinatorBk", label: "Koordinator BK" },
               { key: "kaprodi", label: "Kaprodi" },
             ].map(({ key, label }) => (
