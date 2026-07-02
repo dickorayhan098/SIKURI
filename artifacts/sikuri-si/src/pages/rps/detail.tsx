@@ -126,7 +126,7 @@ export default function RpsDetail() {
               <SelectValue placeholder="Ubah status..." />
             </SelectTrigger>
             <SelectContent>
-              {["DRAFT","REVIEW","LENGKAP","REVISI"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              {["DRAFT", "REVIEW", "LENGKAP", "REVISI"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -155,6 +155,7 @@ export default function RpsDetail() {
               <div key={key} className="space-y-1.5">
                 <Label className="text-xs">{label}</Label>
                 <Input
+                  type={key === "tanggalPenyusunan" ? "date" : "text"}
                   value={header[key] ?? ""}
                   onChange={(e) => setHeaderForm({ ...header, [key]: e.target.value })}
                   className="h-8 text-sm"

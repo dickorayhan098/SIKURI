@@ -56,6 +56,14 @@ router.post("/", async (req, res) => {
   if (!body.success) { res.status(400).json({ error: "Invalid input" }); return; }
 
   try {
+    if (body.data.tanggalPenyusunan) {
+      const parsedDate = Date.parse(body.data.tanggalPenyusunan);
+      if (Number.isNaN(parsedDate)) {
+        res.status(400).json({ error: "Format tanggal penyusunan tidak valid. Contoh: YYYY-MM-DD" });
+        return;
+      }
+    }
+
     const [row] = await db.insert(rpsTable).values({
       mkId: body.data.mkId,
       kodeDokumen: body.data.kodeDokumen ?? null,
@@ -104,7 +112,16 @@ router.patch("/:id", async (req, res) => {
   try {
     const updateData: Record<string, unknown> = {};
     if (body.data.kodeDokumen !== undefined) updateData.kodeDokumen = body.data.kodeDokumen;
-    if (body.data.tanggalPenyusunan !== undefined) updateData.tanggalPenyusunan = body.data.tanggalPenyusunan;
+    if (body.data.tanggalPenyusunan !== undefined) {
+      if (body.data.tanggalPenyusunan !== null && body.data.tanggalPenyusunan !== "") {
+        const parsedDate = Date.parse(body.data.tanggalPenyusunan as string);
+        if (Number.isNaN(parsedDate)) {
+          res.status(400).json({ error: "Format tanggal penyusunan tidak valid. Contoh: YYYY-MM-DD" });
+          return;
+        }
+      }
+      updateData.tanggalPenyusunan = body.data.tanggalPenyusunan;
+    }
     if (body.data.dosenPengembang !== undefined) updateData.dosenPengembang = body.data.dosenPengembang;
     if (body.data.koordinatorBk !== undefined) updateData.koordinatorBk = body.data.koordinatorBk;
     if (body.data.kaprodi !== undefined) updateData.kaprodi = body.data.kaprodi;
@@ -145,7 +162,7 @@ router.get("/:id/pertemuan", async (req, res) => {
 
 router.post("/:id/pertemuan", async (req, res) => {
   const rpsId = Number(req.params.id);
-  const { pertemuans } = req.body as { pertemuans: Array<{ pertemuanKe: number; [key: string]: unknown }> };
+  const { pertemuans } = req.body as { pertemuans: Array<{ pertemuanKe: number;[key: string]: unknown }> };
   if (!Array.isArray(pertemuans)) { res.status(400).json({ error: "pertemuans must be array" }); return; }
 
   try {
