@@ -83,6 +83,10 @@ router.post("/", async (req, res) => {
     });
   } catch (err) {
     req.log.error({ err }, "Failed to create mata kuliah");
+    if (err && typeof err === "object" && "code" in err && err.code === "23505") {
+      res.status(400).json({ error: "Kode mata kuliah sudah terdaftar" });
+      return;
+    }
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -156,6 +160,10 @@ router.patch("/:id", async (req, res) => {
     });
   } catch (err) {
     req.log.error({ err }, "Failed to update mata kuliah");
+    if (err && typeof err === "object" && "code" in err && err.code === "23505") {
+      res.status(400).json({ error: "Kode mata kuliah sudah terdaftar" });
+      return;
+    }
     res.status(500).json({ error: "Internal server error" });
   }
 });
